@@ -1,81 +1,99 @@
-# VisionGuard AI — продуктовый трек Detection
+# VisionGuard AI — Detection Product Track
 
-Единое веб-приложение для трёх задач: повреждения ЛЭП, переломы на X-ray и
-автотранспорт на аэроснимках. Для каждой задачи пользователь выбирает быстрый
-или точный профиль и получает bounding boxes, классы, уверенность и размеченный файл.
+A unified web application for three computer vision tasks: power line damage detection, bone fracture detection in X-ray images, and vehicle detection in aerial imagery.
 
-## Каталог задач и моделей
+For each task, the user can select either a fast or an accurate model profile and receive bounding boxes, predicted classes, confidence scores, and an annotated output image.
 
-| Задача | Датасет | Быстрая модель | Точная модель |
+## Task and Model Catalog
+
+| Task | Dataset | Fast Model | Accurate Model |
 |---|---|---|---|
-| Повреждения ЛЭП | Реестр ФГАУ ЦИТ | `powerline_yolo11n.pt` | `powerline_yolo11s.pt` |
-| Переломы | Bone Fracture Detection | `fracture_yolov8_fast.pt` | `fracture_yolov8l.pt` |
-| Автотранспорт | VisDrone / Open Images V7 | `vehicle_yolo11n.pt` | `vehicle_yolo11s.pt` |
+| Power Line Damage Detection | FGAU CIT Registry | `powerline_yolo11n.pt` | `powerline_yolo11s.pt` |
+| Bone Fracture Detection | Bone Fracture Detection | `fracture_yolov8_fast.pt` | `fracture_yolov8l.pt` |
+| Vehicle Detection | VisDrone / Open Images V7 | `vehicle_yolo11n.pt` | `vehicle_yolo11s.pt` |
 
-Команды обучения находятся в `scripts/train.py`, конфигурации — в `configs/`,
-а notebook с шестью отдельными ячейками запуска — в
-`notebooks/train_product_tracks.ipynb`.
-
-## Результат
-
-- лучшая представленная модель: **mAP@0.5 = 0.902**;
-- общий максимум **F1 = 0.87** при `confidence = 0.439`;
-- 8 классов объектов ЛЭП;
-- шесть checkpoints: YOLO11n и YOLO11s отдельно для каждой из трёх задач;
-- FastAPI backend и Streamlit frontend;
-- локальный запуск, Docker и конфигурация для Streamlit Community Cloud;
-- notebook с двумя отдельными ячейками обучения.
-
-Приложенные метрики относятся к предоставленному запуску лучшей модели. Они не
-переносятся автоматически на fallback-веса или на вторую модель.
-
-## Архитектура
+Training commands are available in `scripts/train.py`, configuration files are stored in `configs/`, and the notebook with six separate training cells is located at:
 
 ```text
-Пользователь → Streamlit → FastAPI → PredictionService → YOLO11n / YOLO11s
-                              ↓
-                 JSON + изображение с разметкой
+notebooks/train_product_tracks.ipynb
 ```
 
-Streamlit умеет работать и в embedded-режиме без отдельного HTTP-процесса — это
-удобно для бесплатного облачного размещения. Наличие и готовность FastAPI можно
-проверить в `/docs` и `/health`.
+## Results
 
-## Быстрый старт
+- Best presented model: **mAP@0.5 = 0.902**
+- Maximum overall **F1 score = 0.87** at `confidence = 0.439`
+- 8 power line object classes
+- Six checkpoints: separate YOLO11n and YOLO11s models for each of the three tasks
+- FastAPI backend and Streamlit frontend
+- Support for local execution, Docker, and Streamlit Community Cloud deployment
+- Notebook with separate training cells for each model configuration
 
-Требуется Python 3.10–3.12.
+The included metrics correspond to the provided run of the best-performing model. They do not automatically apply to fallback weights or to the alternative model profile.
+
+## Architecture
+
+```text
+User → Streamlit → FastAPI → PredictionService → YOLO11n / YOLO11s
+                             ↓
+                  JSON + annotated image
+```
+
+Streamlit can also operate in embedded mode without a separate HTTP backend process. This is convenient for free cloud deployment.
+
+FastAPI availability and service status can be checked through:
+
+```text
+/docs
+/health
+```
+
+## Quick Start
+
+Python 3.10–3.12 is required.
 
 ```bash
 python -m venv .venv
+
 # Windows PowerShell
 .venv\Scripts\Activate.ps1
+
 pip install -r requirements.txt
 ```
 
-Терминал 1 — backend:
+Terminal 1 — start the backend:
 
 ```bash
 python run_api.py
 ```
 
-Терминал 2 — frontend через API:
+Terminal 2 — start the frontend through the API:
 
 ```bash
 $env:POWERGUARD_API_URL="http://localhost:8000"
 streamlit run app.py
 ```
 
-Или один процесс в embedded-режиме:
+Alternatively, run the application as a single process in embedded mode:
 
 ```bash
 streamlit run app.py
 ```
 
-API: `http://localhost:8000/docs`, UI: `http://localhost:8501`.
+API documentation:
 
-## Веса
+```text
+http://localhost:8000/docs
+```
 
-Итоговые файлы не хранятся в Git из-за размера. После обучения положите их сюда:
+User interface:
+
+```text
+http://localhost:8501
+```
+
+## Model Weights
+
+Final model weight files are not stored in Git because of their size. After training, place them in the following locations:
 
 ```text
 models/powerline_yolo11n.pt
@@ -86,7 +104,7 @@ models/vehicle_yolo11n.pt
 models/vehicle_yolo11s.pt
 ```
 
-Пути можно переопределить:
+The model paths can be overridden through environment variables:
 
 ```bash
 $env:POWERLINE_FAST_MODEL_PATH="C:\weights\powerline_fast.pt"
@@ -94,33 +112,62 @@ $env:FRACTURE_ACCURATE_MODEL_PATH="C:\weights\fracture_accurate.pt"
 $env:VEHICLE_FAST_MODEL_PATH="C:\weights\vehicle_fast.pt"
 ```
 
-Если custom-весов нет, по умолчанию загружаются базовые `yolo11n.pt` и
-`yolo11s.pt`. Это **только проверка приложения**: COCO-классы не совпадают с
-классами ЛЭП. Для строгого режима задайте
-`ALLOW_PRETRAINED_FALLBACK=false` — тогда API честно сообщит об отсутствующих
-весах.
+If custom weights are unavailable, the application downloads the base `yolo11n.pt` and `yolo11s.pt` models by default.
 
-## Метрики и анализ
+This fallback is intended only for testing the application. COCO classes do not match the power line inspection classes.
 
-Для object detection выбраны:
+For strict mode, set:
 
-- `mAP@0.5` — основная метрика критерия проекта и интегральная оценка качества;
-- `mAP@0.5:0.95` — более строгая оценка локализации;
-- precision/recall — цена ложных тревог и пропусков;
-- F1-confidence — выбор рабочего порога интерфейса;
-- latency — сравнение быстрого и точного профилей.
+```bash
+$env:ALLOW_PRETRAINED_FALLBACK="false"
+```
 
-По PR-кривой средний AP@0.5 равен 0.902. Сильные классы: `bad_insulator`
-(0.979), `safety_sign+` (0.977), `nest` (0.948). Слабее распознаются
-`polymer_insulators` (0.771) и `vibration_damper` (0.792). Нормализованная
-матрица показывает заметные пропуски в background для виброгасителей (0.32) и
-гнёзд (0.22). Вероятная причина — малый размер объекта, сложный фон и дисбаланс.
-Следующие эксперименты: oversampling слабых классов, crop/tiling (SAHI),
-увеличение разрешения, hard-negative mining и проверка разбиения на утечки.
+In strict mode, the API reports missing custom weights instead of loading pretrained fallback models.
 
-Исходные графики находятся в `assets/metrics/`.
+## Metrics and Analysis
+
+The following metrics were selected for object detection evaluation:
+
+- `mAP@0.5` — the main project metric and an overall measure of detection quality
+- `mAP@0.5:0.95` — a stricter measure of localization accuracy
+- Precision and recall — evaluation of false alarms and missed detections
+- F1-confidence curve — selection of the operating confidence threshold
+- Latency — comparison between the fast and accurate model profiles
+
+According to the precision-recall curve, the mean AP@0.5 is 0.902.
+
+The strongest classes are:
+
+- `bad_insulator`: 0.979
+- `safety_sign+`: 0.977
+- `nest`: 0.948
+
+The weaker-performing classes are:
+
+- `polymer_insulators`: 0.771
+- `vibration_damper`: 0.792
+
+The normalized confusion matrix shows a noticeable number of missed detections assigned to the background class for vibration dampers, with a value of 0.32, and nests, with a value of 0.22.
+
+Possible causes include small object size, complex backgrounds, and class imbalance.
+
+Potential next experiments include:
+
+- Oversampling underrepresented classes
+- Image cropping and tiling with SAHI
+- Increasing input resolution
+- Hard-negative mining
+- Checking the train-validation split for data leakage
+
+The original metric plots are stored in:
+
+```text
+assets/metrics/
+```
 
 ## API
+
+Example request:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/predict \
@@ -130,12 +177,12 @@ curl -X POST http://localhost:8000/api/v1/predict \
   -F "iou=0.45"
 ```
 
-Endpoints:
+Available endpoints:
 
-- `GET /health` — состояние сервиса;
-- `GET /api/v1/tasks` — три задачи, классы и ссылки на датасеты;
-- `GET /api/v1/models?task_id=vehicle` — модели задачи и источник весов;
-- `POST /api/v1/predict` — инференс изображения до 20 МБ.
+- `GET /health` — service health status
+- `GET /api/v1/tasks` — available tasks, classes, and dataset links
+- `GET /api/v1/models?task_id=vehicle` — models available for a selected task and the source of their weights
+- `POST /api/v1/predict` — image inference for files up to 20 MB
 
 ## Docker
 
@@ -143,9 +190,14 @@ Endpoints:
 docker compose up --build
 ```
 
-Сервисы: UI на `8501`, API на `8000`. Смонтируйте свои `.pt` в папку `models/`.
+The services are available at:
 
-## Проверки
+- UI: port `8501`
+- API: port `8000`
+
+Mount custom `.pt` model weights into the `models/` directory.
+
+## Tests and Validation
 
 ```bash
 pip install -r requirements-dev.txt
@@ -153,19 +205,31 @@ pytest -q
 python -m compileall detection_app app.py run_api.py
 ```
 
-## Размещение
+## Deployment
 
-Для Streamlit Community Cloud выберите `app.py`, Python 3.11 и добавьте веса
-через разрешённое внешнее хранилище или Git LFS. При одном процессе оставьте
-`POWERGUARD_API_URL` пустым. Для полноценного раздельного контура разверните API
-на Render/Railway/VPS и задайте URL в секретах окружения Streamlit.
+For Streamlit Community Cloud:
 
-Перед публикацией замените шаблонные контакты и ссылки в
-`docs/submission_checklist.md`, запишите короткую демонстрацию по сценарию из
-`docs/presentation_script.md` и проверьте лицензию датасета/весов.
+1. Select `app.py` as the application entry point.
+2. Use Python 3.11.
+3. Store model weights in an approved external storage service or use Git LFS.
+4. Leave `POWERGUARD_API_URL` empty when running in single-process embedded mode.
 
-## Ограничения
+For a separate frontend and backend architecture, deploy the API to Render, Railway, or a VPS, then add the API URL to the Streamlit environment secrets.
 
-MVP не является системой промышленной безопасности и не заменяет осмотр
-инженером. Нужны полевые испытания, мониторинг дрейфа, журналирование версий
-модели и ручная проверка критических находок.
+Before publication:
+
+- Replace placeholder contacts and links in `docs/submission_checklist.md`
+- Record a short demonstration using the script in `docs/presentation_script.md`
+- Verify the licenses of the datasets and model weights
+
+## Limitations
+
+This MVP is not an industrial safety system and does not replace inspection by a qualified engineer.
+
+Before production use, the system would require:
+
+- Field testing
+- Model drift monitoring
+- Model version logging
+- Validation on representative operational data
+- Manual review of critical detections
