@@ -1,0 +1,12 @@
+path: ../data/fracture
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: Elbow Positive
+  1: Fingers Positive
+  2: Forearm Fracture
+  3: Humerus Fracture
+  4: Shoulder Fracture
+  5: Wrist Positive
+

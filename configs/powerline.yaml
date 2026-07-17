@@ -1,0 +1,14 @@
+path: ../data/powerline
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: vibration_damper
+  1: festoon_insulators
+  2: traverse
+  3: nest
+  4: safety_sign+
+  5: bad_insulator
+  6: damaged_insulator
+  7: polymer_insulators
+
