@@ -1,4 +1,4 @@
-# VisionGuard AI — Detection Product Track
+# Detection Product Track
 
 A unified web application for three computer vision tasks: power line damage detection, bone fracture detection in X-ray images, and vehicle detection in aerial imagery.
 
